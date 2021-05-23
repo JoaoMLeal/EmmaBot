@@ -17,43 +17,37 @@ def main():
     corpus.close()
 
     # Check if the bot has been mentioned
-    def check_mentions(api, since_id):
+    def check_mentions():
         new_since_id = since_id
-        for tweet in tweepy.Cursor(api.mentions_timeline,
-                                   since_id=since_id).items():
-            new_since_id = max(tweet.id, new_since_id)
-            if tweet.in_reply_to_status_id is not None:
+        for at_tweet in tweepy.Cursor(api.mentions_timeline,
+                                      since_id=since_id).items():
+            new_since_id = max(at_tweet.id, new_since_id)
+            if at_tweet.in_reply_to_status_id is not None:
                 continue
 
             # Reply with generated tweet
             reply_tweet = tweetgen.make_tweet(word_lines)
+            reply_tweet = "@{} {}".format(at_tweet.user.screen_name, reply_tweet)
+            print(reply_tweet, at_tweet.id_str, at_tweet.user.screen_name)
             api.update_status(
                 status=reply_tweet,
-                in_reply_to_status_id=tweet.id,
+                in_reply_to_status_id=at_tweet.id
             )
         return new_since_id
-
-    # Try to tweet
-    def send_tweet(tweet):
-        try:
-            print(tweet)
-            api.update_status(tweet)
-        except tweepy.TweepError:
-            print("Could not tweet")
 
     since_id = 1
     cur_time = 0
     max_time = 3600
 
     while True:
-        since_id = check_mentions(api, since_id)
+        since_id = check_mentions()
         cur_time = 60 + cur_time
 
         if cur_time > max_time:
             cur_time = 0
             tweet = tweetgen.make_tweet(word_lines)
             print(tweet)
-            send_tweet(tweet)
+            api.update_status(tweet)
 
         time.sleep(60)
 
