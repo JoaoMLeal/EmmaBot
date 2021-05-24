@@ -1,7 +1,7 @@
 import sys
-import time
 import io
 import tweepy
+import json
 
 import tweetgen
 import secret
@@ -26,8 +26,7 @@ def read_corpus():
 # Send replies to mentions
 def check_mentions():
     # Get last tweet id
-    id_file = open("since_id.txt", "r+")
-    since_id = int(id_file.read())
+    since_id, index = read_id_file()
 
     # Send tweets to mentions
     new_since_id = since_id
@@ -38,23 +37,54 @@ def check_mentions():
             continue
 
         # Reply with generated tweet
-        reply_tweet = tweetgen.make_tweet(word_lines)
+        reply_tweet = get_from_many_tweets(index)
         reply_tweet = "@{} {}".format(at_tweet.user.screen_name, reply_tweet)
-        print(reply_tweet, at_tweet.id_str, at_tweet.user.screen_name)
         api.update_status(
             status=reply_tweet,
             in_reply_to_status_id=at_tweet.id
         )
+        index += 1
 
     # Write last tweet id
-    id_file.write(new_since_id)
+    update_id_file(new_since_id, index)
 
 
 # Send tweet
-def send_tweet():
-    tweet = tweetgen.make_tweet(word_lines)
-    print(tweet)
+def send_single_tweet():
+    since_id, index = read_id_file()
+
+    tweet = get_from_many_tweets(index)
     api.update_status(tweet)
+
+    update_id_file(since_id, index+1)
+
+
+# Get tweet from file
+def get_from_many_tweets(index):
+    with io.open("many_tweets.txt", "r", encoding="utf-8") as many:
+        tweets = many.readlines()
+        tweet = tweets[index]
+    return tweet
+
+
+# Update log file
+def update_id_file(since_id, tweet_count):
+    data = dict()
+    data['since_id'] = since_id
+    data['tweet_count'] = tweet_count
+
+    id_file = open("ids.json", "w")
+    json.dump(data, id_file)
+    id_file.close()
+
+
+# Read log file
+def read_id_file():
+    id_file = open("ids.json", "r")
+    data = json.load(id_file)
+    id_file.close()
+
+    return data['since_id'], data['tweet_count']
 
 
 if __name__ == '__main__':
@@ -64,7 +94,9 @@ if __name__ == '__main__':
         api = tweepy_auth()
         word_lines = read_corpus()
         if sys.argv[1] == "hourly_tweet":
-            check_mentions()
+            send_single_tweet()
         elif sys.argv[1] == "check_mentions":
-            send_tweet()
+            check_mentions()
+        elif sys.argv[1] == "gen":
+            tweetgen.gen_many_tweets(word_lines, 3000)
 

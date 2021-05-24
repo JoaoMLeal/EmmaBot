@@ -1,4 +1,5 @@
 from random import randrange
+import io
 
 sentence_starters = []
 
@@ -12,7 +13,12 @@ def create_word_map(word_lines):
     for line in word_lines:
 
         # Split each line into a list of words
-        words = line.split()
+        pre_words = line.split()
+        words = []
+
+        for word in pre_words:
+            if '@' not in word and 'https://t.co' not in word:
+                words.append(word)
 
         end_of_sentence = True
 
@@ -79,3 +85,11 @@ def make_tweet(word_lines):
     word_map = create_word_map(word_lines)
     tweet_array = gen_message(word_map)
     return ' '.join(tweet_array)
+
+
+def gen_many_tweets(word_lines, n):
+    word_map = create_word_map(word_lines)
+    with io.open("many_tweets.txt", "w", encoding="utf-8") as f:
+        for i in range(0, n):
+            tweet = ' '.join(gen_message(word_map))
+            f.write(tweet + "\n")

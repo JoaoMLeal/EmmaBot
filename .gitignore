@@ -4,7 +4,8 @@ secret.py
 alfred.jpg
 nb flag.png
 corpus.txt
-since_id.txt
+ids.json
+many_tweets.txt
 
 venv/
 .idea
